@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Méta-Comparateur Hôtels</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+
+    <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-md">
+        <h1 class="text-2xl font-bold text-gray-800 mb-6 text-center">Comparateur 2x2</h1>
+        
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Nom de l'hôtel</label>
+                <!-- Pré-rempli pour tester l'exemple de Lake Tekapo -->
+                <input type="text" id="hotel" value="Peppers Bluewater Resort" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 border p-2">
+            </div>
+            
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Arrivée</label>
+                    <input type="date" id="checkin" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm border p-2">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Départ</label>
+                    <input type="date" id="checkout" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm border p-2">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Voyageurs</label>
+                <input type="number" id="guests" value="2" min="1" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm border p-2">
+            </div>
+
+            <button onclick="launchGrid()" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded hover:bg-blue-700 transition duration-200 mt-4">
+                Lancer la grille (4 sites)
+            </button>
+            <p id="warning" class="text-red-500 text-sm mt-2 hidden text-center font-semibold">⚠️ Pop-ups bloquées ! Autorise-les dans la barre d'adresse.</p>
+        </div>
+    </div>
+
+    <script>
+        // Initialisation des dates par défaut (J+1 et J+3)
+        const today = new Date();
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const inThreeDays = new Date(today);
+        inThreeDays.setDate(inThreeDays.getDate() + 3);
+        
+        document.getElementById('checkin').value = tomorrow.toISOString().split('T')[0];
+        document.getElementById('checkout').value = inThreeDays.toISOString().split('T')[0];
+
+        function launchGrid() {
+            const hotel = document.getElementById('hotel').value.trim();
+            const checkin = document.getElementById('checkin').value;
+            const checkout = document.getElementById('checkout').value;
+            const guests = document.getElementById('guests').value;
+            const warningEl = document.getElementById('warning');
+
+            if(!hotel || !checkin || !checkout) {
+                alert("Merci de remplir tous les champs.");
+                return;
+            }
+
+            warningEl.classList.add('hidden'); // Reset warning
+
+            // Formatage des chaînes pour les URLs
+            const urlEncoded = encodeURIComponent(hotel); // Pour Google & TripAdvisor
+            const dashEncoded = hotel.replace(/\s+/g, '-').toLowerCase(); // Pour Kayak
+
+            // Génération des URLs cibles
+            const urls = [
+                `https://www.google.com/travel/hotels?q=${urlEncoded}&checkin=${checkin}&checkout=${checkout}`,
+                `https://www.kayak.com/hotels/${dashEncoded}/${checkin}/${checkout}/${guests}guests`,
+                `https://www.tripadvisor.com/Search?q=${urlEncoded}`,
+                // Trivago utilise une structure de requête complexe, on passe par leur moteur de recherche générique
+                `https://www.trivago.com/en-US/srl?search=200-${urlEncoded};dr-${checkin}.${checkout};rc-1-${guests}`
+            ];
+
+            // Calcul des dimensions de l'écran pour la grille 2x2
+            const w = window.screen.availWidth / 2;
+            const h = window.screen.availHeight / 2;
+
+            // Coordonnées (X, Y) pour chaque fenêtre
+            const positions = [
+                `width=${w},height=${h},left=0,top=0`,          // Haut Gauche (Google)
+                `width=${w},height=${h},left=${w},top=0`,       // Haut Droite (Kayak)
+                `width=${w},height=${h},left=0,top=${h}`,       // Bas Gauche (TripAdvisor)
+                `width=${w},height=${h},left=${w},top=${h}`     // Bas Droite (Trivago)
+            ];
+
+            // Ouverture séquentielle
+            let blocked = false;
+            urls.forEach((url, i) => {
+                let newWin = window.open(url, `comparator_win_${i}`, positions[i]);
+                if (!newWin || newWin.closed || typeof newWin.closed == 'undefined') {
+                    blocked = true;
+                }
+            });
+
+            // Si le navigateur a bloqué au moins une fenêtre
+            if (blocked) {
+                warningEl.classList.remove('hidden');
+            }
+        }
+    </script>
+</body>
+</html>
